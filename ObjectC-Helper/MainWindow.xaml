@@ -1,0 +1,68 @@
+﻿<mah:MetroWindow x:Class="ObjectC.Helper.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ObjectC.Helper"
+        xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro" xmlns:system="clr-namespace:System;assembly=System.Runtime"
+                 mc:Ignorable="d"
+        Title="懒加载生成器" Height="600" Width="1000">
+    <Grid>
+        <Grid UseLayoutRounding="True">
+            <!--Grid.RowDefinitions定义行-->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="8*"></RowDefinition>
+                <!--一行-->
+                <RowDefinition ></RowDefinition>
+                <!--一行-->
+            </Grid.RowDefinitions>
+
+            <!--Grid.ColumnDefinitions定义列-->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <!--一列-->
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <!--一列-->
+            </Grid.ColumnDefinitions>
+
+            <!--在第二行第一列上加一个按钮-->
+            <TextBox x:Name="codeInputTextBox" Grid.Column="0" Grid.Row="0" Grid.RowSpan="1" Grid.ColumnSpan="1" 
+                     mah:ControlsHelper.FocusBorderBrush="#FF45B8EE" 
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Visible"></TextBox>
+
+            <TextBox x:Name="codeOutputTextBox" Grid.Column="1" Grid.Row="0" Grid.RowSpan="1" Grid.ColumnSpan="1"
+                     mah:ControlsHelper.FocusBorderBrush="#FF45B8EE" 
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Visible"></TextBox>
+            
+            <StackPanel Grid.Column="0" Grid.Row="1" Grid.RowSpan="1" Grid.ColumnSpan="2">
+                <Button x:Name="codeConverterButton" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" mah:ControlsHelper.FocusBorderBrush="#FF5F5F5F" Margin="0,10,0,0" FontWeight="Normal" mah:ControlsHelper.ContentCharacterCasing="Normal" Click="codeConverterButton_Click">转换ObjectC代码</Button>
+            </StackPanel>
+
+            <!--<TextBox Grid.Column="1" Grid.Row="0" Grid.RowSpan="1" Grid.ColumnSpan="1">你好</TextBox>-->
+            <!--<avalonEdit:TextEditor
+                Grid.Column="1" Grid.Row="0" Grid.RowSpan="1" Grid.ColumnSpan="1"
+            xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
+            Name="TextEditor"
+            SyntaxHighlighting=""
+            FontFamily="Consolas"
+            FontSize="10pt" 
+            LineNumbersForeground="Black" 
+            ShowLineNumbers="True">
+                <avalonEdit:TextEditor.Options>
+                    <avalonEdit:TextEditorOptions ShowSpaces="True" >
+                        <avalonEdit:TextEditorOptions.ColumnRulerPosition>
+                            <system:Int32>10</system:Int32>
+                        </avalonEdit:TextEditorOptions.ColumnRulerPosition>
+                    </avalonEdit:TextEditorOptions>
+                </avalonEdit:TextEditor.Options>
+            </avalonEdit:TextEditor>-->
+            <!--添加侵害容器-->
+            <!--<GridSplitter Grid.Column="1" VerticalAlignment="Stretch" Grid.RowSpan="2" HorizontalAlignment ="Left" Width="5"/>-->
+        </Grid>
+
+    </Grid>
+</mah:MetroWindow>
