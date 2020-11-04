@@ -100,11 +100,13 @@ namespace XibToMasonry.Utils
             } 
             else
             {
-                string name = nodeName switch
-                {
-                    "button" => "UIButton",
-                    _ => ""
-                };
+                //string name = nodeName switch
+                //{
+                //    "button" => "UIButton",
+                //    _ => ""
+                //};
+                string name = "UI" + System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(nodeName);
+                return name;
             }
         }
 
@@ -118,13 +120,15 @@ namespace XibToMasonry.Utils
             string customClass = xml.GetAttribute("customClass");
             string className = GetOCClassName(name, customClass);
 
+            Console.WriteLine(@$"{className} {propertyName}");
+
             if (isMain)
             {
                 //主View是self.view
                 _controlNameXml = xml["connections"];
             }
 
-            Console.WriteLine(propertyName);
+            
 
             xml.SetAttribute("xibToMasonryNamePropertyName", propertyName);
             //处理子view
