@@ -148,7 +148,7 @@ namespace XibToMasonry.Utils
             lazyCode += @$"        UIButton *button = [UIButton new]; {"\r\n"}";
             //lazyCode += @$"        button.***;";
 
-            //TODO属性、文字、图片、颜色
+            //属性、文字、图片、颜色
             foreach (XmlElement item in xml.ChildNodes)
             {
                 if (item.Name == "state")
@@ -177,6 +177,10 @@ namespace XibToMasonry.Utils
                 else if (item.Name == "color")
                 {
                     lazyCode += NodeColor(item);
+                }
+                else if (item.Name == "rect")
+                {
+                    //TODO 尺寸
                 }
             }
 
