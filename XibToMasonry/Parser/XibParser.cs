@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,58 +13,59 @@ namespace XibToMasonry.Utils
     public class XibParser
     {
 
-        private JObject _rootJson;
+        //private JObject _rootJson;
         private XmlDocument _rootXml;
         private XmlElement _controlNameXml;
-        private JArray _controlNameJson;
+        //private JArray _controlNameJson;
         private int _fakeNameIndex;
 
-        private ConnectionsParser _connectionsParser;
+        //private ConnectionsParser _connectionsParser;
 
+        private string _xibFilePath;
+        private string _mainClassName;
 
+        //声明
+        private string _propertyCode = string.Empty;
+
+        //AddSubview
+        private string _propertyAddViewCode = string.Empty;
+
+        //懒加载
+        private string _propertyLazyCode = string.Empty;
+
+        //布局
+        private string _propertyMasCode = string.Empty;
 
 
         public XibParser(string filePath) {
             //读入
             _fakeNameIndex = 0;
+            _xibFilePath = filePath;
             string xml = File.ReadAllText(filePath);
            
-
             //解析 connections
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
             _rootXml = doc;
 
-
            string jsonText = JsonConvert.SerializeXmlNode(doc);
            Console.WriteLine(jsonText);
 
+            //_rootJson = JObject.Parse(jsonText);
 
-            //实际已经全解析，只需将对应的数据写出
-            _rootJson = JObject.Parse(jsonText);
+            StartParser();
 
-
-            //生成类声明结构
-
-
-            //生成类内容结构
-
-            //生成bodyView的
-            //将名称添加至subviews
-
-            //将所有控件命名
-
-            WriteInterFace();
-
+            SaveParser();
         }
 
-        //生成声明
-        private void WriteInterFace()
-        {
-            //
-            //从关联的.m文件中提取操作代码
 
-            JObject mainView = (JObject)_rootJson["document"]["objects"]["view"];
+
+
+        //生成声明
+        private void StartParser()
+        {
+            //TODO 从关联的.m文件中提取操作代码?
+
             //JObject mainView = (JObject)_rootJson["document"]["objects"]["view"];
             XmlElement mainViewXml = _rootXml["document"]["objects"]["view"];
 
@@ -73,7 +75,60 @@ namespace XibToMasonry.Utils
 
             RunOneView(mainViewXml, true);
 
+            Console.WriteLine(_propertyCode);
+            Console.WriteLine(_propertyAddViewCode);
+            Console.WriteLine(_propertyMasCode);
+            Console.WriteLine(_propertyLazyCode);
+        }
 
+
+        private void SaveParser()
+        {
+            //头文件引入？
+            string fullCode = string.Empty;
+            fullCode += "\r\n";
+
+            //存储@interface ()
+            fullCode += $"@interface {_mainClassName}() \r\n";
+            fullCode += "\r\n";
+            fullCode += $"{_propertyCode} \r\n";
+            fullCode += $"@end \r\n\r\n";
+
+
+            //存储@implementation 
+            fullCode += $"@implementation {_mainClassName} \r\n";
+            fullCode += "\r\n";
+
+            //存储init()函数
+            fullCode += "- (instancetype)init { \r\n";
+            fullCode += "    if (self = [super init]) { \r\n";
+            fullCode += "        [self setupView]; \r\n";
+            fullCode += "    } \r\n";
+            fullCode += "    return self; \r\n";
+            fullCode += "} \r\n";
+            fullCode += "\r\n";
+
+            //生成setupView()
+            fullCode += "- (void)setupView { \r\n";
+            fullCode += _propertyAddViewCode.Insert(0, "    ").Replace("\r\n", "\r\n    ");
+            fullCode += "\r\n";
+            fullCode += _propertyMasCode;
+            fullCode += "\r\n";
+            fullCode += "} \r\n";
+            fullCode += "\r\n";
+
+            //存储懒加载
+            fullCode += _propertyLazyCode;
+            fullCode += "\r\n";
+            fullCode += "@end\r\n";
+           
+
+            var fileName = Path.GetFileNameWithoutExtension(_xibFilePath);
+
+            File.WriteAllText(Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.m"), fullCode);
+
+            //TODO 头文件
+            //File.WriteAllText(Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.h"), fullCode);
 
         }
 
@@ -87,12 +142,11 @@ namespace XibToMasonry.Utils
         private void RunOneView(XmlElement xml, bool isMain, string parentViewPropertyName = "")
         {
             //取当前的角色
-
             string name = xml.Name;
             string id = xml.GetAttribute("id");
             string propertyName = IdToName(id); //属性名
             string customClass = xml.GetAttribute("customClass");
-            string className = CalculationHelper.GetOCClassName(name, customClass); // UIView UIButton
+            string className = CalculationHelper.GetOCClassName(name, customClass); // 类型名 UIView UIButton
             xml.SetAttribute("xibToMasonryNamePropertyName", propertyName);
 
             if (isMain)
@@ -102,30 +156,23 @@ namespace XibToMasonry.Utils
                 //存储propertyName的列表
                 propertyName = "view";
                 _controlNameXml = xml["connections"];
+                _mainClassName = className;
+
+                //TODO 继承类名
+
+                _propertyMasCode += "\r\n    //TODO 主view需要根据情况自己调整\r\n";
             } 
             else
             {
-                //TODO 写出
-                Console.WriteLine(@$"@property(nonatomic, strong) {className} *{propertyName}");
-
-                //写出数据
-
+                _propertyCode += $"@property(nonatomic, strong) {className} *{propertyName}; \r\n";
                 string parentViewName = parentViewPropertyName == "" ? "self" : parentViewPropertyName;
-
-                Console.WriteLine(@$"[self.{parentViewName} addSubview:self.{propertyName}];");
-
+                _propertyAddViewCode += $"[self.{parentViewName} addSubview:self.{propertyName}]; \r\n";
+                _propertyLazyCode += GetLazyCode(xml, propertyName, className) + "\r\n";
+               
             }
 
-            if (className == "UIButton")
-            {
-                GetUIButton(xml, propertyName);
-            }
-
-            //分析约束，如果是带有secondItem，则视为全局依赖项目，后续读取
-            //如果约束没有带有secondItem，则为自身属性的显示，如高度等
-            //创建懒加载
-            //TODO 优先处理不带依赖的布局
-            //处理子view
+            //主view需自行调整
+            _propertyMasCode += GetMasCode(xml, propertyName, className) + "\r\n";
 
 
             XmlElement subView = xml["subviews"];
@@ -139,29 +186,79 @@ namespace XibToMasonry.Utils
             //Console.WriteLine(subView);
         }
 
-        private string GetUIButton(XmlElement xml, string propertyName)
+        private string GetMasCode(XmlElement xml, string propertyName, string className)
+        {
+            string masCode = string.Empty;
+
+            foreach (XmlElement item in xml.ChildNodes)
+            {
+                if (item.Name == "rect")
+                {
+                    //TODO 可能存在多种key
+                    item.GetAttribute("key");
+                    //item.GetAttribute("x");
+                    //item.GetAttribute("y");
+                    //item.GetAttribute("width");
+                    //item.GetAttribute("height");
+
+                    masCode += $"    [self.{propertyName} mas_makeConstraints:^(MASConstraintMaker * make) {{ \r\n";
+                    masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
+                    masCode += $"        make.height.scale375_offset({item.GetAttribute("height")});\r\n";
+                    masCode += $"        make.x.scale375_offset({item.GetAttribute("x")});\r\n";
+                    masCode += $"        make.y.scale375_offset({item.GetAttribute("y")});\r\n";
+                    masCode += $"    }}];\r\n";
+
+                    //TODO 尺寸
+                    //autoresizingMask
+                    //自动依赖父级
+                }
+            }
+            //Console.WriteLine(masCode);
+            return masCode;
+        }
+
+
+        /// <summary>
+        /// 目前支持button和基本的view
+        /// </summary>
+        /// <param name="xml"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="className"></param>
+        /// <returns></returns>
+        private string GetLazyCode(XmlElement xml, string propertyName, string className)
         {
             string lazyCode = string.Empty;
 
-            lazyCode += @$"- (UIButton *){propertyName} {{ {"\r\n"}";
+            lazyCode += @$"- ({className} *){propertyName} {{ {"\r\n"}";
             lazyCode += @$"    if (_{propertyName}) {{  {"\r\n"}";
-            lazyCode += @$"        UIButton *button = [UIButton new]; {"\r\n"}";
-            //lazyCode += @$"        button.***;";
+
+            string funcValueName = className switch
+            {
+                "UIButton" => "button",
+                _ => "view",
+            };
+
+            lazyCode += className switch
+            {
+                "UIButton" => @$"        UIButton *{funcValueName} = [UIButton buttonWithType:UIButtonTypeCustom]; {"\r\n"}",
+                _ => @$"        {className} *view = [{className} new]; {"\r\n"}",
+            };
 
             //属性、文字、图片、颜色
             foreach (XmlElement item in xml.ChildNodes)
             {
+                //TODO支持label等常用控件属性设置
                 if (item.Name == "state")
                 {
                     string stateName = $"UIControlState{CalculationHelper.UpperFirstChar(item.GetAttribute("key"))}";
                     if (string.IsNullOrWhiteSpace(item.GetAttribute("title")) == false) //设置标题
                     {
-                        lazyCode += $"        [button setTitle:@\"{item.GetAttribute("title")}\" forState:{stateName}]; \r\n";
+                        lazyCode += $"        [{funcValueName} setTitle:@\"{item.GetAttribute("title")}\" forState:{stateName}]; \r\n";
                     }
 
-                    if (string.IsNullOrWhiteSpace(item.GetAttribute("image")) == false) //设置头像
+                    if (string.IsNullOrWhiteSpace(item.GetAttribute("image")) == false) //设置图片
                     {
-                        lazyCode += $"        [button setImage:[UIImage imageNamed:@\"{item.GetAttribute("image")}\"] forState:{stateName}]; \r\n";
+                        lazyCode += $"        [{funcValueName} setImage:[UIImage imageNamed:@\"{item.GetAttribute("image")}\"] forState:{stateName}]; \r\n";
                     }
 
                     //检查子节点设置标题颜色
@@ -176,11 +273,11 @@ namespace XibToMasonry.Utils
                 } 
                 else if (item.Name == "color")
                 {
-                    lazyCode += NodeColor(item);
+                    lazyCode += NodeColor(item, funcValueName);
                 }
                 else if (item.Name == "rect")
                 {
-                    //TODO 尺寸
+                    //在其他地方实现
                 }
             }
 
@@ -191,28 +288,28 @@ namespace XibToMasonry.Utils
                 {
                     if (item.Name == "action")
                     {
-                        Console.WriteLine("实现方法{0}", item.GetAttribute("eventType"));
+                        //Console.WriteLine("实现方法{0}", item.GetAttribute("eventType"));
 
                         string eventName = $"UIControlEvent{CalculationHelper.UpperFirstChar(item.GetAttribute("eventType"))}";
                         string selector = item.GetAttribute("selector");
 
-                        lazyCode += $"        [button addTarget:self action:@selector({selector}) forControlEvents:{eventName}]; \r\n";
+                        lazyCode += $"        [{funcValueName} addTarget:self action:@selector({selector}) forControlEvents:{eventName}]; \r\n";
                     }
                 }
             }
 
-            lazyCode += $"        _{propertyName} = button; \r\n";
+            lazyCode += $"        _{propertyName} = {funcValueName}; \r\n";
             lazyCode += "        } \r\n";
             lazyCode += "    } \r\n";
             lazyCode += $"    return _{propertyName}; \r\n";
             lazyCode += "} \r\n";
 
-            Console.WriteLine(lazyCode);
+            //Console.WriteLine(lazyCode);
             return lazyCode;
         }
 
         
-        private string NodeColor(XmlElement xml, string state = "")
+        private string NodeColor(XmlElement xml, string funcValueName,  string state = "")
         {
 
             if (string.IsNullOrWhiteSpace(xml.GetAttribute("key")) == false)
@@ -241,13 +338,16 @@ namespace XibToMasonry.Utils
                     alpha = xml.GetAttribute("alpha");
                 }
 
+
+                alpha = alpha.Length > 4 ? alpha.Substring(0, 4) : alpha;
+
                 if (string.IsNullOrWhiteSpace(state))
                 {
-                    lazyCode += $"        [button set{CalculationHelper.UpperFirstChar(xml.GetAttribute("key"))}:[UIColor hx_colorWithHexString:@\"#{hex}\" alpha:{alpha}]]; \r\n";
+                    lazyCode += $"        [{funcValueName} set{CalculationHelper.UpperFirstChar(xml.GetAttribute("key"))}:[UIColor hx_colorWithHexString:@\"#{hex}\" alpha:{alpha}]]; \r\n";
                 } 
                 else
                 {
-                    lazyCode += $"        [button set{CalculationHelper.UpperFirstChar(xml.GetAttribute("key"))}:[UIColor hx_colorWithHexString:@\"#{hex}\" alpha:{alpha}] " +
+                    lazyCode += $"        [{funcValueName} set{CalculationHelper.UpperFirstChar(xml.GetAttribute("key"))}:[UIColor hx_colorWithHexString:@\"#{hex}\" alpha:{alpha}] " +
                         $"forState:{state}]; \r\n";
                 }
                 return lazyCode;
