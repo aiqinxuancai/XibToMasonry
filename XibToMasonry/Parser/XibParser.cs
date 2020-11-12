@@ -48,14 +48,22 @@ namespace XibToMasonry.Utils
             doc.LoadXml(xml);
             _rootXml = doc;
 
-           string jsonText = JsonConvert.SerializeXmlNode(doc);
-           Console.WriteLine(jsonText);
+            Console.WriteLine($"Start converting files:{filePath}");
 
+
+           //string jsonText = JsonConvert.SerializeXmlNode(doc);
+           //Console.WriteLine(jsonText);
             //_rootJson = JObject.Parse(jsonText);
 
-            StartParser();
+            try
+            {
+                StartParser();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
 
-            SaveParser();
         }
 
 
@@ -69,20 +77,32 @@ namespace XibToMasonry.Utils
             //JObject mainView = (JObject)_rootJson["document"]["objects"]["view"];
             XmlElement mainViewXml = _rootXml["document"]["objects"]["view"];
 
+            foreach (XmlElement item in _rootXml["document"]["objects"].ChildNodes)
+            {
+                if (item.Name != "placeholder")
+                {
+                    mainViewXml = item;
+                    break;
+                }
+            }
+
             //寻找主View
             //green="0.4823529411764706" blue="0.62352941176470589" 
             CalculationHelper.ColorToHex("0.4823529411764706", "0.4823529411764706", "0.62352941176470589");
 
             RunOneView(mainViewXml, true);
 
+
+#if DEBUG
             Console.WriteLine(_propertyCode);
             Console.WriteLine(_propertyAddViewCode);
             Console.WriteLine(_propertyMasCode);
             Console.WriteLine(_propertyLazyCode);
+#endif
         }
 
 
-        private void SaveParser()
+        public void SaveParser()
         {
             //头文件引入？
             string fullCode = string.Empty;
@@ -124,14 +144,21 @@ namespace XibToMasonry.Utils
            
 
             var fileName = Path.GetFileNameWithoutExtension(_xibFilePath);
+            var savePath = Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.m");
 
-            File.WriteAllText(Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.m"), fullCode);
+            Console.WriteLine($"Save file:{savePath}");
+
+            if (File.Exists(savePath))
+            {
+                savePath += ".rename";
+            }
+
+            File.WriteAllText(savePath, fullCode);
 
             //TODO 头文件
             //File.WriteAllText(Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.h"), fullCode);
 
         }
-
 
         /// <summary>
         /// 仅支持自定义View 还不支持tableviewcell等xib
@@ -139,12 +166,18 @@ namespace XibToMasonry.Utils
         /// <param name="xml"></param>
         /// <param name="isMain"></param>
         /// <param name="parentViewPropertyName"></param>
-        private void RunOneView(XmlElement xml, bool isMain, string parentViewPropertyName = "")
+        /// <param name="dontAddView">不要添加这个view进代码，一般表示继承过来的</param>
+        /// <param name="truePropertyName">因为contentView不能从connections中取到变量名，所以直传contentView</param>
+        private void RunOneView(XmlElement xml, 
+            bool isMain, 
+            string parentViewPropertyName = "", 
+            bool dontAddView = false, 
+            string truePropertyName = "")
         {
             //取当前的角色
             string name = xml.Name;
             string id = xml.GetAttribute("id");
-            string propertyName = IdToName(id); //属性名
+            string propertyName = truePropertyName != "" ? truePropertyName : IdToName(id); //属性名
             string customClass = xml.GetAttribute("customClass");
             string className = CalculationHelper.GetOCClassName(name, customClass); // 类型名 UIView UIButton
             xml.SetAttribute("xibToMasonryNamePropertyName", propertyName);
@@ -153,38 +186,52 @@ namespace XibToMasonry.Utils
             {
                 //获取当前View的名字
                 //主View是self.view
-                //存储propertyName的列表
                 propertyName = "view";
-                _controlNameXml = xml["connections"];
+                _controlNameXml = xml["connections"];  //存储propertyName的列表
                 _mainClassName = className;
 
                 //TODO 继承类名
-
                 _propertyMasCode += "\r\n    //TODO 主view需要根据情况自己调整\r\n";
             } 
             else
             {
-                _propertyCode += $"@property(nonatomic, strong) {className} *{propertyName}; \r\n";
-                string parentViewName = parentViewPropertyName == "" ? "self" : parentViewPropertyName;
-                _propertyAddViewCode += $"[self.{parentViewName} addSubview:self.{propertyName}]; \r\n";
-                _propertyLazyCode += GetLazyCode(xml, propertyName, className) + "\r\n";
-               
-            }
-
-            //主view需自行调整
-            _propertyMasCode += GetMasCode(xml, propertyName, className) + "\r\n";
-
-
-            XmlElement subView = xml["subviews"];
-            if (subView != null)
-            {
-                foreach (XmlElement item in subView.ChildNodes)
+                if (dontAddView == false)
                 {
-                    RunOneView(item, false, propertyName);
+                    _propertyCode += $"@property(nonatomic, strong) {className} *{propertyName}; \r\n";
+                    string parentViewName = parentViewPropertyName == "" ? "self" : parentViewPropertyName;
+                    _propertyAddViewCode += $"[self.{parentViewName} addSubview:self.{propertyName}]; \r\n";
+                    _propertyLazyCode += GetLazyCode(xml, propertyName, className) + "\r\n";
                 }
             }
-            //Console.WriteLine(subView);
+
+            if (dontAddView == false)
+            {
+                //主view需自行调整
+                _propertyMasCode += GetMasCode(xml, propertyName, className) + "\r\n";
+            }
+
+            XmlElement contentView = FindContentView(xml);
+
+            if (contentView != null)
+            {
+                //如果是有contentView，则判断为tableviewcell等cell的xib
+                propertyName = "view"; //propertyName不用也无所谓
+                RunOneView(contentView, false, propertyName, true, "contentView");
+                
+            }
+            else
+            {
+                XmlElement subView = xml["subviews"];
+                if (subView != null)
+                {
+                    foreach (XmlElement item in subView.ChildNodes)
+                    {
+                        RunOneView(item, false, propertyName);
+                    }
+                }
+            }
         }
+
 
         private string GetMasCode(XmlElement xml, string propertyName, string className)
         {
@@ -194,12 +241,8 @@ namespace XibToMasonry.Utils
             {
                 if (item.Name == "rect")
                 {
-                    //TODO 可能存在多种key
+                    //TODO 可能存在多种key （contentStretch、frame）
                     item.GetAttribute("key");
-                    //item.GetAttribute("x");
-                    //item.GetAttribute("y");
-                    //item.GetAttribute("width");
-                    //item.GetAttribute("height");
 
                     masCode += $"    [self.{propertyName} mas_makeConstraints:^(MASConstraintMaker * make) {{ \r\n";
                     masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
@@ -229,8 +272,8 @@ namespace XibToMasonry.Utils
         {
             string lazyCode = string.Empty;
 
-            lazyCode += @$"- ({className} *){propertyName} {{ {"\r\n"}";
-            lazyCode += @$"    if (_{propertyName}) {{  {"\r\n"}";
+            lazyCode += $"- ({className} *){propertyName} {{ \r\n";
+            lazyCode += $"    if (!_{propertyName}) {{ \r\n";
 
             string funcValueName = className switch
             {
@@ -240,8 +283,8 @@ namespace XibToMasonry.Utils
 
             lazyCode += className switch
             {
-                "UIButton" => @$"        UIButton *{funcValueName} = [UIButton buttonWithType:UIButtonTypeCustom]; {"\r\n"}",
-                _ => @$"        {className} *view = [{className} new]; {"\r\n"}",
+                "UIButton" => $"        UIButton *{funcValueName} = [UIButton buttonWithType:UIButtonTypeCustom]; \r\n",
+                _ => $"        {className} *view = [{className} new]; \r\n",
             };
 
             //属性、文字、图片、颜色
@@ -275,10 +318,21 @@ namespace XibToMasonry.Utils
                 {
                     lazyCode += NodeColor(item, funcValueName);
                 }
+                else if (item.Name == "fontDescription") //字体
+                {
+                    lazyCode += NodeFont(item, funcValueName);
+                }
+                else if (item.Name == "constraints")
+                {
+                    //TODO 约束，取当前的约束
+                    //TODO 如果不包含 firstItem和secondItem ，视为私有存储供给GetMasCode处理
+                    //TODO 如果包含，则加入同一个结构体中，在最后的GetMasCode处理
+                }
                 else if (item.Name == "rect")
                 {
-                    //在其他地方实现
+                    //GetMasCode处理
                 }
+
             }
 
             //方法
@@ -308,6 +362,36 @@ namespace XibToMasonry.Utils
             return lazyCode;
         }
 
+        //[UIFont fontWithName:@"DFLiJinHeiW8" size:12];
+        private string NodeFont(XmlElement xml, string funcValueName, string state = "")
+        {
+            var lazyCode = "";
+            if (string.IsNullOrWhiteSpace(xml.GetAttribute("key")) == false)
+            {
+
+                var type = xml.GetAttribute("type");
+                var fontName = xml.GetAttribute("name");
+                var fontSize = xml.GetAttribute("pointSize");
+
+                if (type == "system")
+                {
+                    //TODO  weight="semibold" 
+                    lazyCode += $"        {funcValueName}.font = [UIFont systemFontOfSize:scale375_value({fontSize})]; \r\n";
+                }
+                else
+                {
+                    lazyCode += $"        {funcValueName}.font = [UIFont fontWithName:@\"{fontName}\" size:scale375_value({fontSize})]; \r\n";
+                }
+
+                lazyCode += $"        {funcValueName}.font = [UIFont fontWithName:@\"{fontName}\" size:scale375_value({fontSize})]; \r\n";
+
+                return lazyCode;
+            }
+            return "";
+        }
+
+
+        
         
         private string NodeColor(XmlElement xml, string funcValueName,  string state = "")
         {
@@ -338,7 +422,6 @@ namespace XibToMasonry.Utils
                     alpha = xml.GetAttribute("alpha");
                 }
 
-
                 alpha = alpha.Length > 4 ? alpha.Substring(0, 4) : alpha;
 
                 if (string.IsNullOrWhiteSpace(state))
@@ -356,6 +439,21 @@ namespace XibToMasonry.Utils
         }
 
 
+
+        private XmlElement FindContentView(XmlElement xml)
+        {
+            XmlElement contentView = null;
+            //需要寻找contentView
+            foreach (XmlElement item in xml.ChildNodes)
+            {
+                if (item.GetAttribute("key") == "contentView")
+                {
+                    contentView = item;
+                    break;
+                }
+            }
+            return contentView;
+        }
 
         //将view的id属性转换成实际名字
         private string IdToName(string id)
