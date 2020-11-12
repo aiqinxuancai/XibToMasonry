@@ -37,7 +37,7 @@ namespace XibToMasonry.Utils
         private Dictionary<string, string> _propertyNameIdHashtable = new Dictionary<string, string>();
 
         //依赖列表
-        private XmlElement _constraintList;
+        private List<XmlElement> _constraintList = new List<XmlElement>();
 
         public XibParser(string filePath) {
             //读入
@@ -49,6 +49,7 @@ namespace XibToMasonry.Utils
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
             _rootXml = doc;
+
 
             Console.WriteLine($"Start converting files:{filePath}");
 
@@ -241,33 +242,49 @@ namespace XibToMasonry.Utils
         private string GetMasCode(XmlElement xml, string propertyName, string className)
         {
             string masCode = string.Empty;
-
+            masCode += $"    [self.{propertyName} mas_makeConstraints:^(MASConstraintMaker * make) {{ \r\n";
             foreach (XmlElement item in xml.ChildNodes)
             {
                 if (item.Name == "rect")
                 {
                     //TODO 可能存在多种key （contentStretch、frame）
                     item.GetAttribute("key");
-
-                    masCode += $"    [self.{propertyName} mas_makeConstraints:^(MASConstraintMaker * make) {{ \r\n";
                     masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
                     masCode += $"        make.height.scale375_offset({item.GetAttribute("height")});\r\n";
                     masCode += $"        make.x.scale375_offset({item.GetAttribute("x")});\r\n";
                     masCode += $"        make.y.scale375_offset({item.GetAttribute("y")});\r\n";
-                    masCode += $"    }}];\r\n";
-
-                    //TODO 尺寸
-                    //constraints multiplier ??
-                    //autoresizingMask
-                    //自动依赖父级
                 }
                 else if (item.Name == "constraints")
                 {
                     // TODO约束，取当前的约束
                     // TODO如果不包含第一项和第二项，则专有存储供给获取Mas Code处理
                     // TODO如果包含，则加入同一个结构体中，在最后的Get Mas Code处理
+                    //TODO 尺寸
+                    //constraints multiplier ??
+                    //autoresizingMask
+
+                    foreach (XmlElement subItem in item)
+                    {
+                        if (subItem.Name == "constraint")
+                        {
+                            //约束
+                            masCode += NodeConstraint(subItem, propertyName);
+                        }
+                    }
+
+                    //TODO 有bug
+                    //全局的
+                    foreach (XmlElement subItem in _constraintList.ToArray())
+                    {
+                        masCode += NodeConstraint(subItem, propertyName);
+                    }
+                    
+
+                    //检测全局约束是否有firstItem等于自己的
+
                 }
             }
+            masCode += $"    }}];\r\n";
             //Console.WriteLine(masCode);
             return masCode;
         }
@@ -358,13 +375,7 @@ namespace XibToMasonry.Utils
             return lazyCode;
         }
 
-        /// <summary>
-        /// 字体实现
-        /// </summary>
-        /// <param name="xml"></param>
-        /// <param name="funcValueName"></param>
-        /// <param name="state"></param>
-        /// <returns></returns>
+
         private string NodeFont(XmlElement xml, string funcValueName, string state = "")
         {
             var lazyCode = "";
@@ -386,6 +397,37 @@ namespace XibToMasonry.Utils
                 }
 
                 return lazyCode;
+            }
+            return "";
+        }
+
+
+        private string NodeConstraint(XmlElement xml, string funcValueName)
+        {
+            var lazyCode = "";
+
+
+            //TODO 有bug
+
+            var firstItem = xml.GetAttribute("firstItem");
+            var firstAttribute =xml.GetAttribute("firstAttribute");
+            var secondItem = xml.GetAttribute("secondItem");
+            var secondAttribute = xml.GetAttribute("secondAttribute");
+            var constant = xml.GetAttribute("constant"); //值
+
+            constant = string.IsNullOrWhiteSpace(constant) ? "0" : constant;
+
+            if (string.IsNullOrWhiteSpace(firstItem) || xml.GetAttribute("firstItem") == funcValueName)
+            {
+                lazyCode += $"        make.{firstAttribute}.mas_equalTo(self.{secondItem}).scale375_offset({constant});\r\n";
+
+                //自身的约束
+                return lazyCode;
+            }
+            else
+            {
+                //插入到总的约束表
+                _constraintList.Add(xml);
             }
             return "";
         }

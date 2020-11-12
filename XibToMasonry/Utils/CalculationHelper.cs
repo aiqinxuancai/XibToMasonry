@@ -10,6 +10,10 @@ namespace XibToMasonry.Utils
 
         public static string UpperFirstChar(string text)
         {
+            if(string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
             return text.First().ToString().ToUpper() + text.Substring(1, text.Length - 1);
         }
 
