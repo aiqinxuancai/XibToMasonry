@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -12,14 +13,9 @@ namespace XibToMasonry.Utils
 {
     public class XibParser
     {
-
-        //private JObject _rootJson;
         private XmlDocument _rootXml;
-        private XmlElement _controlNameXml;
-        //private JArray _controlNameJson;
-        private int _fakeNameIndex;
 
-        //private ConnectionsParser _connectionsParser;
+        private int _fakeNameIndex; //用于实际没有命名的view的顺序ID
 
         private string _xibFilePath;
         private string _mainClassName;
@@ -36,6 +32,12 @@ namespace XibToMasonry.Utils
         //布局
         private string _propertyMasCode = string.Empty;
 
+        //ID=>屬性名對照对应列表
+        //key = id, value = name;
+        private Dictionary<string, string> _propertyNameIdHashtable = new Dictionary<string, string>();
+
+        //依赖列表
+        private XmlElement _constraintList;
 
         public XibParser(string filePath) {
             //读入
@@ -50,11 +52,6 @@ namespace XibToMasonry.Utils
 
             Console.WriteLine($"Start converting files:{filePath}");
 
-
-           //string jsonText = JsonConvert.SerializeXmlNode(doc);
-           //Console.WriteLine(jsonText);
-            //_rootJson = JObject.Parse(jsonText);
-
             try
             {
                 StartParser();
@@ -67,18 +64,16 @@ namespace XibToMasonry.Utils
         }
 
 
-
-
         //生成声明
         private void StartParser()
         {
             //TODO 从关联的.m文件中提取操作代码?
 
-            //JObject mainView = (JObject)_rootJson["document"]["objects"]["view"];
             XmlElement mainViewXml = _rootXml["document"]["objects"]["view"];
 
             foreach (XmlElement item in _rootXml["document"]["objects"].ChildNodes)
             {
+                //TODO 如果支持storyboard需要修改
                 if (item.Name != "placeholder")
                 {
                     mainViewXml = item;
@@ -86,12 +81,9 @@ namespace XibToMasonry.Utils
                 }
             }
 
-            //寻找主View
-            //green="0.4823529411764706" blue="0.62352941176470589" 
-            CalculationHelper.ColorToHex("0.4823529411764706", "0.4823529411764706", "0.62352941176470589");
+            //CalculationHelper.ColorToHex("0.4823529411764706", "0.4823529411764706", "0.62352941176470589");
 
             RunOneView(mainViewXml, true);
-
 
 #if DEBUG
             Console.WriteLine(_propertyCode);
@@ -144,6 +136,14 @@ namespace XibToMasonry.Utils
            
 
             var fileName = Path.GetFileNameWithoutExtension(_xibFilePath);
+
+
+            //最后统一替换成属性名
+            foreach (var item in _propertyNameIdHashtable)
+            {
+                fullCode = fullCode.Replace(item.Key, item.Value);
+            }
+
             var savePath = Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.m");
 
             Console.WriteLine($"Save file:{savePath}");
@@ -177,20 +177,25 @@ namespace XibToMasonry.Utils
             //取当前的角色
             string name = xml.Name;
             string id = xml.GetAttribute("id");
-            string propertyName = truePropertyName != "" ? truePropertyName : IdToName(id); //属性名
+
+            //写出时再替换
+            string propertyName = id; //truePropertyName != "" ? truePropertyName : IdToName(id); //属性名
+
             string customClass = xml.GetAttribute("customClass");
             string className = CalculationHelper.GetOCClassName(name, customClass); // 类型名 UIView UIButton
             xml.SetAttribute("xibToMasonryNamePropertyName", propertyName);
 
+
+            _propertyNameIdHashtable[id] = truePropertyName != "" ? truePropertyName : IdToName(id);
+
             if (isMain)
             {
-                //获取当前View的名字
-                //主View是self.view
-                propertyName = "view";
-                _controlNameXml = xml["connections"];  //存储propertyName的列表
+                //_controlNameXml =xml [“ connections”];  //存储propertyName的列表
                 _mainClassName = className;
+                _propertyNameIdHashtable[id] = "self";
+                ChangeIdNameToHashtable(xml["connections"]); //存储属性名列表
 
-                //TODO 继承类名
+                 //TODO 继承类名
                 _propertyMasCode += "\r\n    //TODO 主view需要根据情况自己调整\r\n";
             } 
             else
@@ -252,8 +257,15 @@ namespace XibToMasonry.Utils
                     masCode += $"    }}];\r\n";
 
                     //TODO 尺寸
+                    //constraints multiplier ??
                     //autoresizingMask
                     //自动依赖父级
+                }
+                else if (item.Name == "constraints")
+                {
+                    // TODO约束，取当前的约束
+                    // TODO如果不包含第一项和第二项，则专有存储供给获取Mas Code处理
+                    // TODO如果包含，则加入同一个结构体中，在最后的Get Mas Code处理
                 }
             }
             //Console.WriteLine(masCode);
@@ -262,7 +274,7 @@ namespace XibToMasonry.Utils
 
 
         /// <summary>
-        /// 目前支持button和基本的view
+        /// 生成懒加载代码
         /// </summary>
         /// <param name="xml"></param>
         /// <param name="propertyName"></param>
@@ -322,31 +334,17 @@ namespace XibToMasonry.Utils
                 {
                     lazyCode += NodeFont(item, funcValueName);
                 }
-                else if (item.Name == "constraints")
-                {
-                    //TODO 约束，取当前的约束
-                    //TODO 如果不包含 firstItem和secondItem ，视为私有存储供给GetMasCode处理
-                    //TODO 如果包含，则加入同一个结构体中，在最后的GetMasCode处理
-                }
-                else if (item.Name == "rect")
-                {
-                    //GetMasCode处理
-                }
-
             }
 
-            //方法
+            //action的实现
             if (xml["connections"] != null)
             {
                 foreach (XmlElement item in xml["connections"].ChildNodes)
                 {
                     if (item.Name == "action")
                     {
-                        //Console.WriteLine("实现方法{0}", item.GetAttribute("eventType"));
-
                         string eventName = $"UIControlEvent{CalculationHelper.UpperFirstChar(item.GetAttribute("eventType"))}";
                         string selector = item.GetAttribute("selector");
-
                         lazyCode += $"        [{funcValueName} addTarget:self action:@selector({selector}) forControlEvents:{eventName}]; \r\n";
                     }
                 }
@@ -357,12 +355,16 @@ namespace XibToMasonry.Utils
             lazyCode += "    } \r\n";
             lazyCode += $"    return _{propertyName}; \r\n";
             lazyCode += "} \r\n";
-
-            //Console.WriteLine(lazyCode);
             return lazyCode;
         }
 
-        //[UIFont fontWithName:@"DFLiJinHeiW8" size:12];
+        /// <summary>
+        /// 字体实现
+        /// </summary>
+        /// <param name="xml"></param>
+        /// <param name="funcValueName"></param>
+        /// <param name="state"></param>
+        /// <returns></returns>
         private string NodeFont(XmlElement xml, string funcValueName, string state = "")
         {
             var lazyCode = "";
@@ -383,8 +385,6 @@ namespace XibToMasonry.Utils
                     lazyCode += $"        {funcValueName}.font = [UIFont fontWithName:@\"{fontName}\" size:scale375_value({fontSize})]; \r\n";
                 }
 
-                lazyCode += $"        {funcValueName}.font = [UIFont fontWithName:@\"{fontName}\" size:scale375_value({fontSize})]; \r\n";
-
                 return lazyCode;
             }
             return "";
@@ -392,7 +392,13 @@ namespace XibToMasonry.Utils
 
 
         
-        
+        /// <summary>
+        /// 颜色实现
+        /// </summary>
+        /// <param name="xml"></param>
+        /// <param name="funcValueName"></param>
+        /// <param name="state"></param>
+        /// <returns></returns>
         private string NodeColor(XmlElement xml, string funcValueName,  string state = "")
         {
 
@@ -438,8 +444,6 @@ namespace XibToMasonry.Utils
             return "";
         }
 
-
-
         private XmlElement FindContentView(XmlElement xml)
         {
             XmlElement contentView = null;
@@ -458,20 +462,33 @@ namespace XibToMasonry.Utils
         //将view的id属性转换成实际名字
         private string IdToName(string id)
         {
-            string name = @$"fakeIName{_fakeNameIndex}"; //FakeIName
-            if (_controlNameXml != null)
+            if (_propertyNameIdHashtable.TryGetValue(id, out string name))
             {
-                foreach (XmlElement item in _controlNameXml.ChildNodes)
+                return name;
+            }
+
+            //如果这个id没有对应的名字
+            string fakeName = @$"fakeIName{_fakeNameIndex}";
+            _propertyNameIdHashtable[id] = fakeName;
+            _fakeNameIndex++;
+            return fakeName;
+        }
+
+
+        private void ChangeIdNameToHashtable(XmlElement controlNameXml)
+        {
+            if (controlNameXml != null)
+            {
+                foreach (XmlElement item in controlNameXml.ChildNodes)
                 {
-                    if (item.Name == "outlet" && item.GetAttribute("destination") == id)
+                    if (item.Name == "outlet" )
                     {
-                        name = item.GetAttribute("property");
-                        break;
+                        string name = item.GetAttribute("property");
+                        string id = item.GetAttribute("destination");
+                        _propertyNameIdHashtable[id] = name;
                     }
                 }
             }
-            _fakeNameIndex++;
-            return name;
         }
 
 
