@@ -227,7 +227,7 @@ namespace XibToMasonry.Utils
                 //如果是有contentView，则判断为tableviewcell等cell的xib
                 propertyName = "view"; //propertyName不用也无所谓
 
-                //约束存储
+                //contentView需要主动存储约束
                 XmlElement constraints = contentView["constraints"];
                 if (constraints != null)
                 {
@@ -584,10 +584,5 @@ namespace XibToMasonry.Utils
                 }
             }
         }
-
-
-
-
-
     }
 }
