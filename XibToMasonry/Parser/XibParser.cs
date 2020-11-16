@@ -169,10 +169,7 @@ namespace XibToMasonry.Utils
         /// <param name="parentViewPropertyName"></param>
         /// <param name="dontAddView">不要添加这个view进代码，一般表示继承过来的</param>
         /// <param name="truePropertyName">因为contentView不能从connections中取到变量名，所以直传contentView</param>
-        private void RunOneView(XmlElement xml, 
-            bool isMain, 
-            string parentViewPropertyName = "", 
-            bool dontAddView = false, 
+        private void RunOneView(XmlElement xml, bool isMain, string parentViewPropertyName = "", bool dontAddView = false, 
             string truePropertyName = "")
         {
             //取当前的角色
@@ -262,13 +259,21 @@ namespace XibToMasonry.Utils
             {
                 if (item.Name == "rect")
                 {
-                    //TODO 可能存在多种key （contentStretch、frame）
-                    item.GetAttribute("key");
-                    masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
-                    masCode += $"        make.height.scale375_offset({item.GetAttribute("height")});\r\n";
-                    masCode += $"        make.x.scale375_offset({item.GetAttribute("x")});\r\n";
-                    masCode += $"        make.y.scale375_offset({item.GetAttribute("y")});\r\n";
+                    
+                    var rectKey = item.GetAttribute("key");
 
+
+                    if (rectKey == "frame")
+                    {
+                        masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
+                        masCode += $"        make.height.scale375_offset({item.GetAttribute("height")});\r\n";
+                        masCode += $"        make.x.scale375_offset({item.GetAttribute("x")});\r\n";
+                        masCode += $"        make.y.scale375_offset({item.GetAttribute("y")});\r\n";
+                    }
+                    else if (rectKey == "contentStretch")
+                    {
+                        //TODO 可能存在多种key （contentStretch、frame）
+                    }
 
                 }
                 else if (item.Name == "constraints")
@@ -371,6 +376,24 @@ namespace XibToMasonry.Utils
                     lazyCode += NodeFont(item, funcValueName);
                 }
             }
+
+            //key的实现
+            var contentMode = xml.GetAttribute("contentMode");
+            var image = xml.GetAttribute("image");
+            var contentHorizontalAlignment = xml.GetAttribute("contentHorizontalAlignment"); //TODO
+            var contentVerticalAlignment = xml.GetAttribute("contentVerticalAlignment"); //TODO
+            var lineBreakMode = xml.GetAttribute("lineBreakMode"); //TODO
+
+            if (!string.IsNullOrWhiteSpace(image))
+            {
+                lazyCode += $"        [{funcValueName} setImage:[UIImage imageNamed:@\"{image}\"]]; \r\n";
+            }
+
+            if (!string.IsNullOrWhiteSpace(contentMode) && contentMode != "scaleToFill") //scaleToFill默认值
+            {
+                lazyCode += $"        {funcValueName}.contentMode = UIViewContentMode{CalculationHelper.UpperFirstChar(contentMode)}; \r\n";
+            }
+
 
             //action的实现
             if (xml["connections"] != null)
