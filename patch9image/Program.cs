@@ -3,7 +3,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-
+//试图将.9图识别黑线并输出rect坐标，然后输出删除黑线的png，未完成
 namespace patch9image
 {
 

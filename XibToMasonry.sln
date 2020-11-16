@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ObjcetC.Core", "ObjcetC-Cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "patch9image", "patch9image\patch9image.csproj", "{851E0801-6EFA-4461-A4A9-9EC8F0B219D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XibToMasonry", "XibToMasonry\XibToMasonry.csproj", "{305FE611-08D2-4C94-9A69-9AC3427B6942}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XibToMasonry", "XibToMasonry\XibToMasonry.csproj", "{305FE611-08D2-4C94-9A69-9AC3427B6942}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{8CC8F554-9CCE-436F-9D0F-738CCC556E93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +38,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6042D0E6-CC5C-4A63-AF2E-D9E00C78E7BF} = {8CC8F554-9CCE-436F-9D0F-738CCC556E93}
+		{CB5E64BB-30F0-4CF5-A992-6C8D82907688} = {8CC8F554-9CCE-436F-9D0F-738CCC556E93}
+		{851E0801-6EFA-4461-A4A9-9EC8F0B219D3} = {8CC8F554-9CCE-436F-9D0F-738CCC556E93}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {961335AA-2B97-4FA5-B2D7-B2B08F11FA79}
