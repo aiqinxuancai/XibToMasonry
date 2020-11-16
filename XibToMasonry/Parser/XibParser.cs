@@ -78,7 +78,13 @@ namespace XibToMasonry.Utils
                 if (item.Name != "placeholder")
                 {
                     mainViewXml = item;
-                    break;
+                }
+                else
+                {
+
+                    ChangeIdNameToHashtable(item["connections"]); //存储属性名列表
+
+
                 }
             }
 
@@ -363,7 +369,7 @@ namespace XibToMasonry.Utils
                         if (subItem.Name == "color")
                         {
                             //检查子节点设置标题颜色
-                            lazyCode += NodeColor(subItem, stateName);
+                            lazyCode += NodeColor(subItem, funcValueName);
                         }
                     }
                 } 
