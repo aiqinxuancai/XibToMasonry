@@ -273,8 +273,8 @@ namespace XibToMasonry.Utils
                     {
                         masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
                         masCode += $"        make.height.scale375_offset({item.GetAttribute("height")});\r\n";
-                        masCode += $"        make.x.scale375_offset({item.GetAttribute("x")});\r\n";
-                        masCode += $"        make.y.scale375_offset({item.GetAttribute("y")});\r\n";
+                        masCode += $"        make.left.scale375_offset({item.GetAttribute("x")});\r\n";
+                        masCode += $"        make.top.scale375_offset({item.GetAttribute("y")});\r\n";
                     }
                     else if (rectKey == "contentStretch")
                     {
@@ -417,7 +417,6 @@ namespace XibToMasonry.Utils
 
             lazyCode += $"        _{propertyName} = {funcValueName}; \r\n";
             lazyCode += "        } \r\n";
-            lazyCode += "    } \r\n";
             lazyCode += $"    return _{propertyName}; \r\n";
             lazyCode += "} \r\n";
             return lazyCode;
