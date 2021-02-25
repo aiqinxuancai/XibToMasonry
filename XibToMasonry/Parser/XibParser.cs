@@ -39,6 +39,9 @@ namespace XibToMasonry.Utils
         //依赖列表
         private List<XmlElement> _constraintList = new List<XmlElement>();
 
+
+        private const string kOffsetFuncName = "offset"; //scale375_offset
+
         public XibParser(string filePath) {
             //读入
             _fakeNameIndex = 0;
@@ -151,14 +154,9 @@ namespace XibToMasonry.Utils
                 fullCode = fullCode.Replace(item.Key, item.Value);
             }
 
-            var savePath = Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}.m");
+            var savePath = Path.Combine(Directory.GetParent(_xibFilePath).FullName, $"{fileName}_mas.m");
 
             Console.WriteLine($"Save file:{savePath}");
-
-            if (File.Exists(savePath))
-            {
-                savePath += ".rename";
-            }
 
             File.WriteAllText(savePath, fullCode);
 
@@ -271,10 +269,10 @@ namespace XibToMasonry.Utils
 
                     if (rectKey == "frame")
                     {
-                        masCode += $"        make.width.scale375_offset({item.GetAttribute("width")});\r\n";
-                        masCode += $"        make.height.scale375_offset({item.GetAttribute("height")});\r\n";
-                        masCode += $"        make.left.scale375_offset({item.GetAttribute("x")});\r\n";
-                        masCode += $"        make.top.scale375_offset({item.GetAttribute("y")});\r\n";
+                        masCode += $"        make.width.{kOffsetFuncName}({item.GetAttribute("width")});\r\n";
+                        masCode += $"        make.height.{kOffsetFuncName}({item.GetAttribute("height")});\r\n";
+                        masCode += $"        make.left.{kOffsetFuncName}({item.GetAttribute("x")});\r\n";
+                        masCode += $"        make.top.{kOffsetFuncName}({item.GetAttribute("y")});\r\n";
                     }
                     else if (rectKey == "contentStretch")
                     {
@@ -484,7 +482,7 @@ namespace XibToMasonry.Utils
                 {
                     if (string.IsNullOrWhiteSpace(multiplier))
                     {
-                        lazyCode = $"        make.{firstAttribute}.mas_{relation}(self.{secondItem}.mas_{secondAttribute}).scale375_offset({constant});\r\n";
+                        lazyCode = $"        make.{firstAttribute}.mas_{relation}(self.{secondItem}.mas_{secondAttribute}).{kOffsetFuncName}({constant});\r\n";
                     }
                     else
                     {
@@ -496,7 +494,7 @@ namespace XibToMasonry.Utils
             }
             else if (xml.GetAttribute("firstItem") == funcValueName)
             {
-                lazyCode = $"        make.{firstAttribute}.mas_{relation}(self.{secondItem}.mas_{secondAttribute}).scale375_offset({constant});\r\n";
+                lazyCode = $"        make.{firstAttribute}.mas_{relation}(self.{secondItem}.mas_{secondAttribute}).{kOffsetFuncName}({constant});\r\n";
                 return lazyCode;
             }
             else

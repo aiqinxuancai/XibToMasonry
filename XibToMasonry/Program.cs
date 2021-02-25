@@ -8,8 +8,6 @@ namespace XibToMasonry
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-
             if (args.Length > 0)
             {
                 string path = args[0];
@@ -20,14 +18,20 @@ namespace XibToMasonry
                     {
                         XibParser xibParser = new XibParser(file);
                         xibParser.SaveParser();
+                        Console.WriteLine("clear!");
                     }
                 } 
                 else if (File.Exists(path))
                 {
                     XibParser xibParser = new XibParser(path);
                     xibParser.SaveParser();
+                    Console.WriteLine("clear!");
                 }
-
+                Console.WriteLine("conversion complete.");
+            } 
+            else
+            {
+                Console.WriteLine("pls input xib file path.");
             }
         }
     }
