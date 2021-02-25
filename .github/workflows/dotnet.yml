@@ -23,3 +23,12 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: Publish
+      run:  dotnet publish -r osx-x64 /p:PublishSingleFile=true
+    - name: Publish
+      run:  zip "XibToMasonry_osx-x64.zip" GITHUB_WORKSPACE\XibToMasonry\bin\Debug\net5.0\osx-x64\publish\
+    - name: Create a Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "XibToMasonry_osx-x64.zip"
+        token: ${{ secrets.GITHUB_TOKEN }}
