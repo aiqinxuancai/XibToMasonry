@@ -24,10 +24,8 @@ jobs:
       run: dotnet test --no-build --verbosity normal
     - name: Publish
       run:  dotnet publish -r osx-x64 /p:PublishSingleFile=true
-    - name: CD
-      run:  cd $GITHUB_WORKSPACE/XibToMasonry/bin/Debug/net5.0/osx-x64/publish/
     - name: Create a Release
-      run:  tar -zcvf "XibToMasonry_osx-x64.tar.gz" ./
+      run:  tar -zcvf "XibToMasonry_osx-x64.tar.gz" ./XibToMasonry/bin/Debug/net5.0/osx-x64/
     - name: Create a Release
       uses: ncipollo/release-action@v1
       with:
