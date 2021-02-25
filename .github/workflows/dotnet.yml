@@ -23,9 +23,9 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Publish
-      run:  dotnet publish -r osx-x64 /p:PublishSingleFile=true
+      run:  dotnet publish -c Release -r osx-x64 /p:PublishSingleFile=true
     - name: Create a Release
-      run:  tar -zcvf "XibToMasonry_osx-x64.tar.gz" ./XibToMasonry/bin/Debug/net5.0/osx-x64/
+      run:  tar -zcvf "XibToMasonry_osx-x64.tar.gz" ./XibToMasonry/bin/Release/net5.0/osx-x64/publish/
     - name: Create a Release
       uses: ncipollo/release-action@v1
       with:
