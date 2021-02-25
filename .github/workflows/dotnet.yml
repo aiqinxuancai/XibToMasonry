@@ -25,7 +25,7 @@ jobs:
     - name: Publish
       run:  dotnet publish -c Release -r osx-x64 /p:PublishSingleFile=true
     - name: Create a Release
-      run:  tar -zcvf "XibToMasonry_osx-x64.tar.gz" -C /XibToMasonry/bin/Release/net5.0/osx-x64/ publish
+      run:  tar -zcvf "XibToMasonry_osx-x64.tar.gz" -C ./XibToMasonry/bin/Release/net5.0/osx-x64/ publish
     - name: Create a tar.gz
       uses: ncipollo/release-action@v1
       with:
