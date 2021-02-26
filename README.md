@@ -6,6 +6,17 @@
 
 你也可以修改源代码将其输出为更适合自己项目的代码。
 
+## 快速开始
+下载release包解压，使用命令行运行
+
+```cmd
+./XibToMasonry [XibFilePath]
+or
+./XibToMasonry [Directory]
+```
+
+会生成对应的.m文件
+
 ## 如何编译
 
 可能用到这个代码的多是iOS开发，所以简单说下如何自己修改后编译。
@@ -14,15 +25,6 @@
 ```cmd
 dotnet publish -c Release -r osx-x64 /p:PublishSingleFile=true
 ```
-
-## 快速开始
-使用命令行运行
-```cmd
-./XibToMasonry [XibFilePath]
-or
-./XibToMasonry [Directory]
-```
-会生成对应的.m文件
 
 ## 其他说明
 
