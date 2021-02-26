@@ -40,7 +40,7 @@ namespace XibToMasonry.Utils
         private List<XmlElement> _constraintList = new List<XmlElement>();
 
 
-        private const string kOffsetFuncName = "offset"; //scale375_offset
+        private const string kOffsetFuncName = "scale375_offset"; //scale375_offset //offset
 
         public XibParser(string filePath) {
             //读入
