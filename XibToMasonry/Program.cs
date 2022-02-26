@@ -7,11 +7,18 @@ namespace XibToMasonry
 {
     class Program
     {
+
         static void Main(string[] args)
         {
             if (args.Length > 0)
             {
+                
+
                 string path = args[0];
+
+                #if DEBUG
+                path = System.AppDomain.CurrentDomain.SetupInformation.ApplicationBase;
+                #endif
                 if (Directory.Exists(path))
                 {
                     var files = Directory.EnumerateFiles(path)
@@ -38,5 +45,7 @@ namespace XibToMasonry
                 Console.WriteLine("pls input xib file path.");
             }
         }
+
+        
     }
 }
