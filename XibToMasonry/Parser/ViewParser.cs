@@ -203,7 +203,11 @@ namespace XibToMasonry.Parser
             //最后统一替换成属性名
             foreach (var item in _propertyNameIdHashtable)
             {
-                fullCode = fullCode.Replace(item.Key, item.Value);
+                if (!string.IsNullOrEmpty(item.Key))
+                {
+                    fullCode = fullCode.Replace(item.Key, item.Value);
+                }
+
             }
 
             var savePath = Path.Combine(Directory.GetParent(_sourceFilePath).FullName, $"{_mainClassName}_mas.m");
